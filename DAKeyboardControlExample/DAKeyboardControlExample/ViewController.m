@@ -72,6 +72,24 @@
         tableViewFrame.size.height = toolBarFrame.origin.y;
         tableView.frame = tableViewFrame;
     }];
+    [self.view setDidOpenBlock:^(CGRect frame) {
+        NSLog(@"Opened");
+    }];
+    [self.view setDidCloseBlock:^(CGRect frame) {
+        NSLog(@"Closed");
+    }];
+    [self.view setWillCloseBlock:^(CGRect frame) {
+        NSLog(@"Will close");
+    }];
+    [self.view setWillOpenBlock:^(CGRect frame) {
+        NSLog(@"Will open");
+    }];
+    [self.view setOpeningBlock:^(CGRect frame) {
+        NSLog(@"Opening");
+    }];
+    [self.view setClosingBlock:^(CGRect frame) {
+        NSLog(@"Closing");
+    }];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation

@@ -24,6 +24,12 @@ typedef void (^DAKeyboardDidMoveBlock)(CGRect keyboardFrameInView);
 @property (nonatomic) CGFloat keyboardTriggerOffset;
 @property (nonatomic, readonly) BOOL keyboardWillRecede;
 
+@property (nonatomic, copy) DAKeyboardDidMoveBlock willOpenBlock;
+@property (nonatomic, copy) DAKeyboardDidMoveBlock willCloseBlock;
+@property (nonatomic, copy) DAKeyboardDidMoveBlock openingBlock;
+@property (nonatomic, copy) DAKeyboardDidMoveBlock closingBlock;
+@property (nonatomic, copy) DAKeyboardDidMoveBlock didOpenBlock;
+@property (nonatomic, copy) DAKeyboardDidMoveBlock didCloseBlock;
 /** Adding pan-to-dismiss (functionality introduced in iMessages)
  @param didMoveBlock called everytime the keyboard is moved so you can update
   the frames of your views

@@ -34,6 +34,12 @@ static inline UIViewAnimationOptions AnimationOptionsForCurve(UIViewAnimationCur
 
 static char UIViewKeyboardTriggerOffset;
 static char UIViewKeyboardDidMoveBlock;
+static char UIViewKeyboardOpeningBlock;
+static char UIViewKeyboardClosingBlock;
+static char UIViewKeyboardDidOpenBlock;
+static char UIViewKeyboardDidCloseBlock;
+static char UIViewKeyboardWillOpenBlock;
+static char UIViewKeyboardWillCloseBlock;
 static char UIViewKeyboardActiveInput;
 static char UIViewKeyboardActiveView;
 static char UIViewKeyboardPanRecognizer;
@@ -186,6 +192,12 @@ static char UIViewIsPanning;
     
     // Release a few properties
     self.keyboardDidMoveBlock = nil;
+    self.openingBlock = nil;
+    self.closingBlock = nil;
+    self.didOpenBlock = nil;
+    self.didCloseBlock = nil;
+    self.willOpenBlock = nil;
+    self.willCloseBlock = nil;
     self.keyboardActiveInput = nil;
     self.keyboardActiveView = nil;
     self.keyboardPanRecognizer = nil;
@@ -239,12 +251,17 @@ static char UIViewIsPanning;
     
     CGRect keyboardEndFrameView = [self convertRect:keyboardEndFrameWindow fromView:nil];
     
+    if (self.willOpenBlock && !CGRectIsNull(keyboardEndFrameView))
+        self.willOpenBlock(keyboardEndFrameView);
+    
     [UIView animateWithDuration:keyboardTransitionDuration
                           delay:0.0f
                         options:AnimationOptionsForCurve(keyboardTransitionAnimationCurve) | UIViewAnimationOptionBeginFromCurrentState
                      animations:^{
                          if (self.keyboardDidMoveBlock && !CGRectIsNull(keyboardEndFrameView))
                              self.keyboardDidMoveBlock(keyboardEndFrameView);
+                         if (self.openingBlock && !CGRectIsNull(keyboardEndFrameView))
+                             self.openingBlock(keyboardEndFrameView);
                      }
                      completion:^(__unused BOOL finished){
                          if (self.panning && !self.keyboardPanRecognizer)
@@ -265,6 +282,9 @@ static char UIViewIsPanning;
     // Grab the keyboard view
     self.keyboardActiveView = self.keyboardActiveInput.inputAccessoryView.superview;
     self.keyboardActiveView.hidden = NO;
+    
+    if (self.didOpenBlock && !CGRectIsNull(self.keyboardActiveView.frame))
+        self.didOpenBlock(self.keyboardActiveView.frame);
     
     // If the active keyboard view could not be found (UITextViews...), try again
     if (!self.keyboardActiveView)
@@ -291,10 +311,11 @@ static char UIViewIsPanning;
                           delay:0.0f
                         options:AnimationOptionsForCurve(keyboardTransitionAnimationCurve) | UIViewAnimationOptionBeginFromCurrentState
                      animations:^{
-                         if (self.keyboardDidMoveBlock && !CGRectIsNull(keyboardEndFrameView))
+                        if (self.keyboardDidMoveBlock && !CGRectIsNull(keyboardEndFrameView))
                              self.keyboardDidMoveBlock(keyboardEndFrameView);
                      }
-                     completion:nil];
+                     completion:^(BOOL finished) {
+                     }];
 }
 
 - (void)inputKeyboardDidChangeFrame
@@ -315,6 +336,9 @@ static char UIViewIsPanning;
     
     CGRect keyboardEndFrameView = [self convertRect:keyboardEndFrameWindow fromView:nil];
     
+    if (self.willCloseBlock && !CGRectIsNull(keyboardEndFrameView))
+        self.willCloseBlock(keyboardEndFrameView);
+    
     [UIView animateWithDuration:keyboardTransitionDuration
                           delay:0.0f
                         options:AnimationOptionsForCurve(keyboardTransitionAnimationCurve) | UIViewAnimationOptionBeginFromCurrentState
@@ -326,6 +350,9 @@ static char UIViewIsPanning;
                          // Remove gesture recognizer when keyboard is not showing
                          [self removeGestureRecognizer:self.keyboardPanRecognizer];
                          self.keyboardPanRecognizer = nil;
+                         
+                         if (self.didCloseBlock && !CGRectIsNull(keyboardEndFrameView))
+                             self.didCloseBlock(keyboardEndFrameView);
                      }];
 }
 
@@ -350,6 +377,16 @@ static char UIViewIsPanning;
 
         if (self.keyboardDidMoveBlock && !self.keyboardActiveView.hidden&& !CGRectIsNull(keyboardEndFrameView))
             self.keyboardDidMoveBlock(keyboardEndFrameView);
+        
+        if (!self.keyboardActiveView.hidden && !CGRectIsNull(keyboardEndFrameView)) {
+            if (self.previousKeyboardRect.origin.y >= keyboardEndFrameView.origin.y) {
+                if (self.openingBlock)
+                    self.openingBlock(keyboardEndFrameView);
+            } else {
+                if (self.closingBlock)
+                    self.closingBlock(keyboardEndFrameView);
+            }
+        }
 
         self.previousKeyboardRect = keyboardEndFrameView;
     }
@@ -557,6 +594,102 @@ static char UIViewIsPanning;
                              [NSValue valueWithCGRect:previousKeyboardRect],
                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [self didChangeValueForKey:@"previousKeyboardRect"];
+}
+
+- (DAKeyboardDidMoveBlock)willOpenBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardWillOpenBlock);
+}
+
+- (void)setWillOpenBlock:(DAKeyboardDidMoveBlock)keyboardWillOpenBlock
+{
+    [self willChangeValueForKey:@"keyboardWillOpenBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardWillOpenBlock,
+                             keyboardWillOpenBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardWillOpenBlock"];
+}
+
+- (DAKeyboardDidMoveBlock)willCloseBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardWillCloseBlock);
+}
+
+- (void)setWillCloseBlock:(DAKeyboardDidMoveBlock)keyboardWillCloseBlock
+{
+    [self willChangeValueForKey:@"keyboardWillCloseBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardWillCloseBlock,
+                             keyboardWillCloseBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardWillCloseBlock"];
+}
+
+- (DAKeyboardDidMoveBlock)openingBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardOpeningBlock);
+}
+
+- (void)setOpeningBlock:(DAKeyboardDidMoveBlock)keyboardOpeningBlock
+{
+    [self willChangeValueForKey:@"keyboardOpeningBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardOpeningBlock,
+                             keyboardOpeningBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardOpeningBlock"];
+}
+
+- (DAKeyboardDidMoveBlock)closingBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardClosingBlock);
+}
+
+- (void)setClosingBlock:(DAKeyboardDidMoveBlock)keyboardClosingBlock
+{
+    [self willChangeValueForKey:@"keyboardClosingBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardClosingBlock,
+                             keyboardClosingBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardClosingBlock"];
+}
+
+- (DAKeyboardDidMoveBlock)didOpenBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardDidOpenBlock);
+}
+
+- (void)setDidOpenBlock:(DAKeyboardDidMoveBlock)keyboardDidOpenBlock
+{
+    [self willChangeValueForKey:@"keyboardDidOpenBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardDidOpenBlock,
+                             keyboardDidOpenBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardDidOpenBlock"];
+}
+
+- (DAKeyboardDidMoveBlock)didCloseBlock
+{
+    return objc_getAssociatedObject(self,
+                                    &UIViewKeyboardDidCloseBlock);
+}
+
+- (void)setDidCloseBlock:(DAKeyboardDidMoveBlock)keyboardDidCloseBlock
+{
+    [self willChangeValueForKey:@"keyboardDidCloseBlock"];
+    objc_setAssociatedObject(self,
+                             &UIViewKeyboardDidCloseBlock,
+                             keyboardDidCloseBlock,
+                             OBJC_ASSOCIATION_COPY);
+    [self didChangeValueForKey:@"keyboardDidCloseBlock"];
 }
 
 - (DAKeyboardDidMoveBlock)keyboardDidMoveBlock
